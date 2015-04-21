@@ -1,24 +1,41 @@
 
-tasks = new Mongo.Collection('tasks');
-username = new Mongo.Collection('username');
+tasks = new SQL.Collection('tasks','postgres://postgres:1234@localhost/postgres');
+username = new SQL.Collection('username','postgres://postgres:1234@localhost/postgres');
 
 if (Meteor.isClient) {
 
-  Meteor.subscribe('tasks');
-  Meteor.subscribe('username');
 
   Session.set('user', 'all')
+  var taskTable = {
+    id: ['$number'],
+    text: ['$string', '$notnull'],
+    checked: ['$bool'],
+    usernameid: ['$number']
+  };
+
+  tasks.createTable(taskTable);
+
+  var usersTable = {
+    id: ['$number'],
+    name: ['$string', '$notnull']
+  };
+  username.createTable(usersTable);
 
 
   Template.body.helpers({
     usernames: function () {
-      return username.find({});
+      return username.select().fetch();
     },
     tasks: function () {
       if (Session.get('user') === 'all'){
-        return tasks.find({});
+          return tasks.select('tasks.id', 'tasks.text', 'tasks.checked', 'tasks.createdat', 'username.name')
+            .join(['OUTER JOIN'], ['usernameid'], [['username', ['id']]])
+            .fetch();
       }
-      return tasks.find({name: Session.get('user')});
+      return tasks.select('tasks.id', 'tasks.text', 'tasks.checked', 'tasks.createdat', 'username.name')
+          .join(['OUTER JOIN'], ['usernameid'], [['username', ['id']]])
+          .where("name = ?", Session.get('user'))
+          .fetch();
     }
   });
 
@@ -26,12 +43,14 @@ if (Meteor.isClient) {
     "submit .new-task": function (event) {
       if (event.target.category.value){
         var text = event.target.text.value;
-        var user = event.target.category.value;
+        var user = username.select('id')
+                     .where("name = ?", event.target.category.value)
+                     .fetch()[0].id;
         tasks.insert({
-          text: text;,
+          text: text,
           checked:false,
-          name: user
-        });
+          usernameid: user
+        }).save();
         event.target.text.value = "";
       } else{
         alert("please add a user first");
@@ -42,16 +61,20 @@ if (Meteor.isClient) {
       var text = event.target.text.value;
       username.insert({
         name:text
-      });
+      }).save();
       event.target.text.value = "";
 
       return false;
     },
     "click .toggle-checked": function () {
-      tasks.update(this._id, {$set: {checked: ! this.checked}});
+      tasks.update({id: this.id, "checked": !this.checked})
+           .where("id = ?", this.id)
+           .save();
     },
     "click .delete": function () {
-      tasks.remove(this._id);
+      tasks.remove()
+           .where("id = ?", this.id)
+           .save();
     },
     "change .catselect": function(event){
       Session.set('user',event.target.value);
@@ -62,11 +85,21 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
 
-  Meteor.publish('tasks', function(){
-    return tasks.find({});
+  tasks.createTable({text: ['$string'], checked: ["$bool", {$default: false}]}).save();
+  username.createTable({name: ['$string', '$unique']}).save();
+  tasks.createRelationship('username', '$onetomany').save();
+
+
+  tasks.publish('tasks', function(){
+    return tasks.select('tasks.id as id', 'tasks.text', 'tasks.checked', 'tasks.createdat', 'username.id as usernameid', 'username.name')
+       .join(['INNER JOIN'], ["usernameid"], [["username", 'id']])
+       .order('createdat DESC')
+       .limit(100);
   });
 
-  Meteor.publish('username', function(){
-    return username.find({});
+  username.publish('username', function(){
+    return username.select('id', 'name')
+                   .order('createdat DESC')
+                   .limit(100);
   });
 }
