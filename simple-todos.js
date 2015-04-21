@@ -1,4 +1,3 @@
-// Defining 2 SQL collections. The additional paramater is the postgres connection string which will only run on the server
 tasks = new Mongo.Collection('tasks');
 username = new Mongo.Collection('username');
 
