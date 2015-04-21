@@ -5,5 +5,9 @@
 # but you can also edit it by hand.
 
 meteor-platform
-autopublish
 insecure
+less
+accounts-password
+tinytest
+meteorsteam:meteor-postgres
+underscore
