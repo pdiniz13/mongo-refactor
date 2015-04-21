@@ -1,3 +1,4 @@
+
 tasks = new Mongo.Collection('tasks');
 username = new Mongo.Collection('username');
 
@@ -11,7 +12,6 @@ if (Meteor.isClient) {
 
   Template.body.helpers({
     usernames: function () {
-      var test = username.find({});
       return username.find({});
     },
     tasks: function () {
@@ -26,10 +26,11 @@ if (Meteor.isClient) {
     "submit .new-task": function (event) {
       if (event.target.category.value){
         var text = event.target.text.value;
+        var user = event.target.category.value;
         tasks.insert({
-          text:text,
+          text: text;,
           checked:false,
-          name: event.target.category.value
+          name: user
         });
         event.target.text.value = "";
       } else{
