@@ -2,8 +2,6 @@ tasks = new SQL.Collection('tasks', 'postgres://postgres:1234@localhost/postgres
 
 if (Meteor.isClient) {
 
-  Meteor.subscribe('tasks');
-
   var taskTable = {
       id: ['$number'],
       text: ['$string', '$notnull'],
