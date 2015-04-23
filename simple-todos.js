@@ -1,4 +1,3 @@
-
 tasks = new Mongo.Collection('tasks');
 
 if (Meteor.isClient) {
@@ -30,7 +29,6 @@ if (Meteor.isClient) {
     }
 
   });
-
 }
 
 if (Meteor.isServer) {
@@ -38,5 +36,4 @@ if (Meteor.isServer) {
   Meteor.publish('tasks', function(){
     return tasks.find({});
   });
-
 }
