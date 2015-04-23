@@ -1,12 +1,20 @@
-tasks = new Mongo.Collection('tasks');
+tasks = new SQL.Collection('tasks', 'postgres://postgres:1234@localhost/postgres');
 
 if (Meteor.isClient) {
 
   Meteor.subscribe('tasks');
 
+  var taskTable = {
+      id: ['$number'],
+      text: ['$string', '$notnull'],
+      checked: ['$bool'],
+      createdat: ['$date']
+  };
+  tasks.createTable(taskTable);
+
   Template.body.helpers({
     tasks: function () {
-        return tasks.find({});
+        return tasks.select().fetch();
       }
   });
 
@@ -16,16 +24,15 @@ if (Meteor.isClient) {
         tasks.insert({
           text: text,
           checked:false
-        });
+        }).save();
         event.target.text.value = "";
       return false;
     },
-
     "click .toggle-checked": function () {
-      tasks.update(this._id, {$set: {checked: ! this.checked}});
+      tasks.update({id: this.id, "checked": !this.checked}).where("id = ?", this.id).save();
     },
     "click .delete": function () {
-      tasks.remove(this._id);
+      tasks.remove().where("id = ?", this.id).save();
     }
 
   });
@@ -33,7 +40,9 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
 
-  Meteor.publish('tasks', function(){
-    return tasks.find({});
+  //tasks.createTable({text: ['$string'], checked: ["$bool", {$default: false}]}).save();
+
+  tasks.publish('tasks', function(){
+    return tasks.select('id', 'text', 'checked', 'createdat').order('createdat DESC');
   });
 }
